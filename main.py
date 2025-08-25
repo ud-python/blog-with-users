@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 from datetime import date
 from flask import Flask, abort, render_template, redirect, url_for, flash, request
 from flask_bootstrap import Bootstrap5
@@ -27,6 +28,7 @@ pip3 install -r requirements.txt
 This will install the packages from the requirements.txt for this project.
 '''
 
+load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get("FLASH_KEY")
 ckeditor = CKEditor(app)
