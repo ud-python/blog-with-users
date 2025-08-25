@@ -1,3 +1,4 @@
+import os
 from datetime import date
 from flask import Flask, abort, render_template, redirect, url_for, flash, request
 from flask_bootstrap import Bootstrap5
@@ -27,7 +28,7 @@ This will install the packages from the requirements.txt for this project.
 '''
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = '8BYkEfBA6O6donzWlSihBXox7C0sKR6b'
+app.config['SECRET_KEY'] = os.environ.get("FLASH_KEY")
 ckeditor = CKEditor(app)
 Bootstrap5(app)
 
@@ -61,13 +62,13 @@ def admin_only(f):
 # CREATE DATABASE
 class Base(DeclarativeBase):
     pass
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///posts.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get("DB_URI", "sqlite:///posts.db")
 db = SQLAlchemy(model_class=Base)
 db.init_app(app)
 
 
 # CONFIGURE TABLES
-# TODO: Create a User table for all your registered users.
+# Creates a User table for all your registered users.
 class User(UserMixin, db.Model):
     __tablename__ = 'users'
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -128,7 +129,7 @@ def register():
     return render_template("register.html", form=form, current_user=current_user)
 
 
-#Retrieve a user from the database based on their email.
+#Retrieves a user from the database based on their email.
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -164,7 +165,7 @@ def get_all_posts():
     return render_template("index.html", all_posts=posts, current_user=current_user)
 
 
-# TODO: Allow logged-in users to comment on posts
+#Allows logged-in users to comment on posts
 @app.route("/post/<int:post_id>", methods=['GET','POST'])
 def show_post(post_id):
     comment_form = CommentForm()
@@ -185,7 +186,7 @@ def show_post(post_id):
     return render_template("post.html", post=requested_post, current_user=current_user, form=comment_form)
 
 
-# TODO: Use a decorator so only an admin user can create a new post
+#Uses a decorator so only an admin user can create a new post
 @app.route("/new-post", methods=["GET", "POST"])
 @admin_only
 def add_new_post():
@@ -205,7 +206,7 @@ def add_new_post():
     return render_template("make-post.html", form=form, current_user=current_user)
 
 
-# TODO: Use a decorator so only an admin user can edit a post
+#Uses a decorator so only an admin user can edit a post
 @app.route("/edit-post/<int:post_id>", methods=["GET", "POST"])
 @admin_only
 def edit_post(post_id):
@@ -228,7 +229,7 @@ def edit_post(post_id):
     return render_template("make-post.html", form=edit_form, is_edit=True, current_user=current_user)
 
 
-# TODO: Use a decorator so only an admin user can delete a post
+#Uses a decorator so only an admin user can delete a post
 @app.route("/delete/<int:post_id>")
 @admin_only
 def delete_post(post_id):
@@ -238,17 +239,18 @@ def delete_post(post_id):
     return redirect(url_for('get_all_posts'))
 
 
+#Uses a decorator to check weather a user is logged in and only the user who commented is allowed to delete the comment.
 @app.route("/delete/comment/<int:comment_id>/<int:post_id>")
 @login_required
 def delete_comment(post_id, comment_id):
     comment_to_delete = db.get_or_404(Comment, comment_id)
 
-    # Check if the current user is the author of the comment OR if the user is the admin (user.id == 1)
+    # Checks if the current user is the author of the comment OR if the user is the admin (user.id == 1)
     if comment_to_delete.author_id == current_user.id or current_user.id == 1:
         db.session.delete(comment_to_delete)
         db.session.commit()
     else:
-        # If the user is not the author or an admin, forbid the action
+        # If the user is not the author or an admin, forbids the action
         return abort(403)
 
     return redirect(url_for('show_post', post_id=post_id))
@@ -264,4 +266,4 @@ def contact():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)
